@@ -8,7 +8,12 @@ const userModel = require('../database/Models/UserModel');
 const Response = require("../lib/Response");
 const Enum = require("../config/Enum");
 const CustomError = require("../lib/Error");
+const auth = require("../lib/auth")();
 
+
+router.all('*', auth.authenticate(), (req, res, next) => {
+  next(); 
+});
 
 router.get("/", async (req, res) => {
 
@@ -70,9 +75,10 @@ router.post("/update", async (req, res) => {
         if (body.budget) updates.budget = body.budget;
         if (body.status) updates.status = body.status;
 
+        // Check if skillsRequired is an array and update accordingly
 
         if (body.skillsRequired && Array.isArray(body.skillsRequired)) {
-            
+
             let project = await projectModel.findById(body._id);
             let project_skillsRequired = project.skillsRequired
 
@@ -93,14 +99,49 @@ router.post("/update", async (req, res) => {
             updates.skillsRequired = project_skillsRequired;
         }
 
+        
+        if (body.applications && Array.isArray(body.applications)) {
+
+            let project = await projectModel.findById(body._id);
+            let project_applications = project.applications
+
+            let removedSkills = project_applications.filter(s => !body.applications.includes(s._id.toString()));
+            let newSkills = body.applications.filter(s => !project_applications.includes(s));
+
+            if (removedSkills.length > 0) {
+                project_applications = project.applications.filter(skill => !removedSkills.some(removedId => removedId.equals(skill))
+                );
+            }
+
+            if (newSkills.length > 0) {
+                for (let i = 0; i < newSkills.length; i++) {
+                    project_applications.push(newSkills[i]);
+                }
+            }
+
+            updates.applications = project_applications;
+        }
+
         await projectModel.updateOne({ _id: body._id }, { $set: updates });
-        // aplications kısmı kaldı buradan devam et
-
-
         res.json(Response.successResponse(Enum.RESPONSE_MESSAGES.CREATED));
     }
     catch (err) {
 
+        res.json(Response.errorResponse(err, Enum.HTTP_CODES.BAD_REQUEST))
+    }
+});
+
+router.post("/delete", async (req, res) => {
+    try {
+        let body = req.body;
+        if (!body._id)
+            throw new CustomError(Enum.HTTP_CODES.BAD_REQUEST, Enum.RESPONSE_MESSAGES.BAD_REQUEST, "id field is required");
+
+        await projectModel.deleteOne({ _id: body._id });
+        res.json(Response.successResponse(Enum.RESPONSE_MESSAGES.DELETED));
+
+
+    } catch (err) {
         res.json(Response.errorResponse(err, Enum.HTTP_CODES.BAD_REQUEST))
     }
 });

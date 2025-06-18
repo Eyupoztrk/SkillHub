@@ -8,7 +8,80 @@ const Enum = require("../config/Enum");
 const CustomError = require("../lib/Error");
 const is = require("is_js");
 const bcrypt = require('bcrypt');
+const JWT = require("jwt-simple");
+const config = require('../config');
+const auth = require("../lib/auth")();
 
+
+router.post("/register", async (req, res) => { // register for admin
+  try {
+    let body = req.body;
+    let userExist = await userModel.findOne({}); // is there any user?
+
+    if (userExist) // if exist return
+      return res.sendStatus(Enum.HTTP_CODES.NOT_FOUND);
+
+    if (!body.email)
+      throw new CustomError(Enum.HTTP_CODES.BAD_REQUEST, Enum.RESPONSE_MESSAGES.BAD_REQUEST, "Email field is required");
+    if (!is.email(body.email))
+      throw new CustomError(Enum.HTTP_CODES.BAD_REQUEST, Enum.RESPONSE_MESSAGES.BAD_REQUEST, "Email format is not valid");
+    if (!body.password)
+      throw new CustomError(Enum.HTTP_CODES.BAD_REQUEST, Enum.RESPONSE_MESSAGES.BAD_REQUEST, "Password field is required");
+
+    let passwordHash = bcrypt.hashSync(body.password, bcrypt.genSaltSync(8), null);
+
+    let user = await new userModel({
+      username: body.username,
+      email: body.email,
+      password: passwordHash,
+      bio: body.bio,
+      skills: body.skills
+
+    });
+
+    await user.save();
+    res.json(Response.successResponse(Enum.RESPONSE_MESSAGES.CREATED));
+
+  } catch (err) {
+    res.json(Response.errorResponse(err));
+  }
+});
+
+router.post("/auth", async (req, res) => {
+  try {
+    let { email, password } = req.body;
+    userModel.validateFieldsBeforeAuth(email, password);
+
+    let user = await userModel.findOne({ email });
+    if (!user)
+      throw new CustomError(Enum.HTTP_CODES.UNAUTHORIZED, "validation", "Email or Password wrong");
+
+    if (!user.validPassword(password))
+      throw new CustomError(Enum.HTTP_CODES.UNAUTHORIZED, "validation", "Email or Password wrong");
+
+    let payload = {
+      id: user._id,
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24)
+    }
+
+    let token = JWT.encode(payload, config.JWT.SECRET);
+
+    let userData = {
+      id: user._id,
+      email: user.email
+    }
+
+    res.json(Response.successResponse({ token, user: userData }));
+
+  } catch (err) {
+    res.json(Response.errorResponse(err));
+  }
+});
+
+
+router.all('*', auth.authenticate(), (req, res, next) => {
+  next(); 
+});
 
 /* GET users listing. */
 router.get("/", async (req, res) => {

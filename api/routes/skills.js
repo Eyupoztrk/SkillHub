@@ -5,6 +5,11 @@ const Response = require("../lib/Response");
 const Enum = require("../config/Enum");
 const CustomError = require("../lib/Error");
 
+const auth = require("../lib/auth")();
+
+router.all('*', auth.authenticate(), (req, res, next) => {
+  next(); 
+});
 
 /* listing. */
 router.get("/", async (req, res) => {

@@ -12,6 +12,22 @@ const JWT = require("jwt-simple");
 const config = require('../config');
 const auth = require("../lib/auth")();
 
+const {rateLimit} = require("express-rate-limit");
+const rateLimitMongo = require("rate-limit-mongo")
+
+const limiter = rateLimit({
+  store: new rateLimitMongo({
+    uri: config.CONNECTION_STRING,
+    collectionName: "rateLimits",
+    expireTimeMs: 15 * 60 * 1000
+  }),
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	limit: 5, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+	//standardHeaders: 'draft-8', // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+	
+});
+
 
 router.post("/register", async (req, res) => { // register for admin
   try {
@@ -47,7 +63,7 @@ router.post("/register", async (req, res) => { // register for admin
   }
 });
 
-router.post("/auth", async (req, res) => {
+router.post("/auth", limiter, async (req, res) => {
   try {
     let { email, password } = req.body;
     userModel.validateFieldsBeforeAuth(email, password);

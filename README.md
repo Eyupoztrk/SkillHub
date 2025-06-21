@@ -28,12 +28,14 @@
 ## 📦 Installation
 
 ### Clone the repository
-#### 1. github
-- git clone https://github.com/eyupoztrk/skillhub.git
-- cd api
 
-#### 2. docker
-- docker pull eyupoztrk/skillhub
-- docker run -d -p 3000:3000 --name skillhub eyupoztrk/skillhub
+#### 1. GitHub
+- `git clone https://github.com/eyupoztrk/skillhub.git`  
+- `cd api`
+
+#### 2. Docker
+- `docker pull eyupoztrk/skillhub`  
+- `docker run -d -p 3000:3000 --name skillhub eyupoztrk/skillhub`
+
 
 

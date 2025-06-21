@@ -7,7 +7,7 @@
 ## 🚀 Features
 
 - ✅ User registration & login with JWT authentication
-- 🧑‍💻 Freelancer profiles with skills, bio, avatar upload
+- 🧑‍💻 Freelancer profiles with skills, bio
 - 📋 Task & project posting with budget and deadline
 - 📨 Project application system with status tracking
 - 🧑‍⚖️ Admin panel: user/project control and reporting
